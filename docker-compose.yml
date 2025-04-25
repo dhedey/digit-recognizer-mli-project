@@ -1,7 +1,17 @@
 version: '3.8'
 
 services:
-  streamlit-app:
-    build: .
+  app:
+    build:
+      dockerfile: ./Dockerfile
+      target: app
     ports:
       - "8501:8501"
+    environment:
+      - MODEL_API_BASE_URL=http://model-api:8000
+  model-api:
+    build:
+      dockerfile: ./Dockerfile
+      target: model-api
+    ports:
+      - "8000:8000"
