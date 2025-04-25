@@ -63,17 +63,15 @@ with predictions_column:
         ])
         st.image(canvas_pixels)
 
+        random.seed(hash(vision_pixels.data.tobytes()))
+        random_label = random.randint(0, 9)
         predictions = [
-            { "model": "random", "label": random.randint(0, 9), "confidence": 0.0, }
+            { "model": "random", "label": random_label, "confidence": 0.0, }
         ]
 
         table_data = pd.DataFrame({
                 "Model": [prediction["model"] for prediction in predictions],
-                "Prediction": [
-                    # f'<span style="font-size: 30px; font-weight: bold">`{prediction["label"]}`</span>'
-                    prediction["label"]
-                    for prediction in predictions
-                ],
+                "Prediction": [prediction["label"] for prediction in predictions],
                 "Confidence": [f'{prediction["confidence"]:2.1%}' for prediction in predictions],
         })
         table_data.set_index('Model', inplace=True)
