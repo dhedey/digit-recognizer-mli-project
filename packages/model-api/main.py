@@ -15,7 +15,7 @@ class HealthCheck(BaseModel):
     status_code=status.HTTP_200_OK,
     response_model=HealthCheck,
 )
-async def get_health() -> HealthCheck:
+async def health_check() -> HealthCheck:
     return HealthCheck(status="OK")
 
 @app.get("/")
