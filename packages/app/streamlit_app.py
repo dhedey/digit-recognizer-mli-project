@@ -1,17 +1,15 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import requests
-import random
 from streamlit_drawable_canvas import st_canvas
-from PIL import Image
-import io
-import base64
 from datetime import datetime
+import helpers
+import api_client
 
 RAW_IMAGE_SIZE = 28
 DRAWING_SCALE = 8
 
+st.title("Digit Recognizer")
 input_column, predictions_column = st.columns([1, 1])
 
 with input_column:
@@ -23,26 +21,21 @@ with input_column:
             height=RAW_IMAGE_SIZE * DRAWING_SCALE,
             width=RAW_IMAGE_SIZE * DRAWING_SCALE,
             key="canvas",
-            # display_toolbar=False,
-            update_streamlit=True,  # Can't seem to put it in a form, so instead have it update in realtime
+            # Have it update the prediction in realtime
+            update_streamlit=True,
         )
 
         with st.form("submission_form", border = False):
-            expected_label = st.number_input("Actual digit", 0, 9, )
-            form_submitted = st.form_submit_button("Submit drawing and expected label")
+            expected_label = st.number_input("Drawn digit", 0, 9, )
+            form_submitted = st.form_submit_button("Submit drawing / label pair")
 
-if canvas_result.image_data is not None:
-    # We have an N = RAW_IMAGE_SIZE * DRAWING_SCALE image as an (N, N, 4 = (R, G, B, A)) dimensional array
-    # We want to down-scale to a (RAW_IMAGE_SIZE, RAW_IMAGE_SIZE, 4) array by taking means of (DRAWING_SCALE * DRAWING_SCALE) blocks
-    greyscale_data = np.matmul(canvas_result.image_data, [1.0/3, 1.0/3, 1.0/3, 0])
-    alpha_channel = np.matmul(canvas_result.image_data, [0, 0, 0, 1.0/256])
-    background_mask = np.ones_like(alpha_channel) - alpha_channel
-    # The canvas assumes a white background
-    background = np.full_like(alpha_channel, 255, dtype=np.float64)
-    single_channel_data = (background * background_mask + greyscale_data * alpha_channel)
-    reshaped_data: np.array = np.reshape(single_channel_data, shape=(RAW_IMAGE_SIZE, DRAWING_SCALE, RAW_IMAGE_SIZE, DRAWING_SCALE))
-    meaned_data = np.mean(reshaped_data, axis=(1, 3))
-    vision_pixels = meaned_data.astype(np.uint8)
+# When the canvas first loads, it has a shape of (300, 600, 4) briefly
+# which causes errors in the scaling code, so go to the fallback then.
+if canvas_result.image_data is not None and canvas_result.image_data.shape == (RAW_IMAGE_SIZE * DRAWING_SCALE, RAW_IMAGE_SIZE * DRAWING_SCALE, 4):
+    vision_pixels = helpers.rgba_to_downscaled_greyscale(
+        canvas_result.image_data,
+        output_shape=(RAW_IMAGE_SIZE, RAW_IMAGE_SIZE)
+    )
 else:
     vision_pixels = np.full(shape=(RAW_IMAGE_SIZE, RAW_IMAGE_SIZE), fill_value=255, dtype=np.uint8)
 
@@ -55,7 +48,7 @@ with predictions_column:
                     # Three copies of greyscale value, then alpha channel
                     # The min just makes the background slightly blue
                     np.array([min(vision_pixel, 240), min(vision_pixel, 245), min(vision_pixel, 255), 255]),
-                    # Repeat using broadcasting to SCALE * SCALE
+                    # Broadcast these 4 values to a block of size DRAWING_SCALE * DRAWING_SCALE
                     (DRAWING_SCALE, DRAWING_SCALE, 4),
                 )
                 for vision_pixel in vision_pixels_row
@@ -63,41 +56,45 @@ with predictions_column:
         ])
         st.image(canvas_pixels)
 
-        random.seed(hash(vision_pixels.data.tobytes()))
-        random_label = random.randint(0, 9)
-        predictions = [
-            { "model": "random", "label": random_label, "confidence": 0.0, }
-        ]
+        predictions = api_client.recognize_digit(vision_pixels)
 
         table_data = pd.DataFrame({
-                "Model": [prediction["model"] for prediction in predictions],
-                "Prediction": [prediction["label"] for prediction in predictions],
-                "Confidence": [f'{prediction["confidence"]:2.1%}' for prediction in predictions],
+            "Model": [prediction["model"] for prediction in predictions],
+            "Prediction": [prediction["predicted_digit"] for prediction in predictions],
+            "Confidence": [f'{prediction["confidence"]:2.1%}' for prediction in predictions],
         })
         table_data.set_index('Model', inplace=True)
         st.table(table_data)
 
-if "predictions" not in st.session_state:
-    st.session_state.predictions = []
+if "submissions" not in st.session_state:
+    st.session_state.submissions = []
 
-predictions = st.session_state.predictions
+submissions = st.session_state.submissions
 
 if form_submitted:
-    image_io = io.BytesIO()
-    image = Image.fromarray(vision_pixels)
-    image.save(image_io, format="PNG")
-    base64_bytes = base64.b64encode(image_io.getvalue())
-    data_url = f"data:image/png;base64,{base64_bytes.decode('ascii')}"
-    predictions.append({
-        "Image": data_url,
-        "Expected": expected_label,
-        "Timestamp": datetime.now()
+    # TODO - Move to postgres in API
+    submissions.append({
+        "image_png": helpers.pixels_to_png_bytes(vision_pixels),
+        "label": expected_label,
+        "predictions": predictions,
+        "timestamp": datetime.now()
     })
 
 with st.container(border = True):
-    st.subheader("Previous uploads")
-    uploads_table = pd.DataFrame(predictions, columns=["Image", "Expected", "Timestamp"])
-    uploads_table.set_index('Timestamp', inplace=True)
+    st.subheader("Previous submissions")
+    display_submissions = [
+        {
+            "Time": submission["timestamp"],
+            "Image": helpers.png_bytes_to_data_uri(submission["image_png"]),
+            "Label": submission["label"],
+        } | {
+            f"Model: {prediction["model"]}": f"{prediction["predicted_digit"]} ({prediction["confidence"]:2.1%})" for prediction in submission["predictions"]
+        }
+        for submission in submissions
+    ]
+    columns = ["Time", "Image", "Label"] if len(display_submissions) == 0 else None
+    uploads_table = pd.DataFrame(display_submissions, columns=columns)
+    uploads_table.set_index('Time', inplace=True)
 
     st.dataframe(
         uploads_table,
@@ -105,20 +102,3 @@ with st.container(border = True):
             "Image": st.column_config.ImageColumn()
         }
     )
-
-
-def load_env_string(name: str) -> str:
-    """Load string environment variable"""
-    import os
-    loaded = os.getenv(name)
-    if loaded is None:
-        raise ValueError(f"Environment variable {name} not set")
-    return loaded
-
-
-API_ROOT = load_env_string("MODEL_API_BASE_URL")
-
-def fetch_data():
-    return requests.get(API_ROOT).json()["value"]
-
-st.write(f"API response is: {fetch_data()}")
