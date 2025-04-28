@@ -6,7 +6,7 @@ kill_all_children(){
 }
 
 uv sync --all-packages --dev
-uv run --package model-api fastapi dev packages/model-api/main.py &
-MODEL_API_BASE_URL=http://localhost:8000 uv run --package app streamlit run packages/app/streamlit_app.py &
+uv run --package model-api fastapi dev packages/model-api/src/model_api/main.py &
+MODEL_API_BASE_URL=http://localhost:8000 uv run --package app streamlit run packages/app/src/app/streamlit_app.py &
 
 wait

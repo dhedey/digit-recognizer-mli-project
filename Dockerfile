@@ -17,7 +17,7 @@ COPY uv.lock pyproject.toml .python-version /app/
 COPY packages/app/pyproject.toml /app/packages/app/pyproject.toml
 
 # Install just the dependencies for the app package
-RUN uv sync --frozen --package app
+RUN uv sync --frozen --no-dev --package app
 
 # Expose the port that Streamlit runs on
 EXPOSE 8501
@@ -30,7 +30,7 @@ HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 COPY . /app
 
 # Command to run the Streamlit app
-ENTRYPOINT ["uv", "run", "--package", "app", "streamlit", "run", "packages/app/streamlit_app.py", "--server.port=8501"]
+ENTRYPOINT ["uv", "run", "--package", "app", "streamlit", "run", "packages/app/src/app/streamlit_app.py", "--server.port=8501"]
 
 #####################################################
 # ================= API CONTAINER ================= #
@@ -45,7 +45,7 @@ COPY uv.lock pyproject.toml .python-version /app/
 COPY packages/model-api/pyproject.toml /app/packages/model-api/pyproject.toml
 
 # Install just the dependencies for the model-api package
-RUN uv sync --frozen --package model-api
+RUN uv sync --frozen --no-dev --package model-api
 
 # Expose the port that fast api runs on
 EXPOSE 8000
@@ -58,4 +58,4 @@ HEALTHCHECK CMD curl --fail http://localhost:8000/health
 COPY . /app
 
 # Command to run the FastAPI app
-ENTRYPOINT ["uv", "run", "--package", "model-api", "fastapi", "run", "packages/model-api/main.py"]
+ENTRYPOINT ["uv", "run", "--package", "model-api", "fastapi", "run", "packages/model-api/src/model-api/main.py"]

@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import List
 import numpy as np
 from dataclasses import dataclass
+from model import CenteredDigitModel
 
 app = FastAPI()
 
@@ -65,7 +66,8 @@ async def submit_digit(data: ApiSubmittedDigit):
 
 def create_predictions(data: DigitData) -> List[DigitClassification]:
     return [
-        predict_random(data)
+        predict_random(data),
+        predict_nn(data),
     ]
 
 def predict_random(data: DigitData) -> DigitClassification:
@@ -76,6 +78,17 @@ def predict_random(data: DigitData) -> DigitClassification:
         model="random",
         predicted_digit=random_label,
         confidence=0,
+    )
+
+centered_digit_model = CenteredDigitModel()
+
+def predict_nn(data: DigitData) -> DigitClassification:
+    from PIL import Image
+    (predicted_digit, confidence) = centered_digit_model.predict(Image.fromarray(data.pixels))
+    return DigitClassification(
+        model="nn-centered",
+        predicted_digit=predicted_digit,
+        confidence=confidence,
     )
 
 @app.get("/")

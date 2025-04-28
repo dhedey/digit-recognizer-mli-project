@@ -1,14 +1,19 @@
 [project]
-name = "app"
+name = "model"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
-    "pandas",
-    "requests>=2.32.3",
-    "streamlit>=1.44.1",
-    "streamlit-drawable-canvas>=0.9.3",
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
 ]
 
 [build-system]
 requires = ["hatchling"] # Required to make this importable as a package
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "jupyter>=1.1.1",
+]
+
+[tool.uv.sources]
