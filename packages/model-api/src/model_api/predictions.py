@@ -16,7 +16,7 @@ class PredictionDigitData:
 
     def create_predictions(self) -> List[PredictionClassification]:
         return [
-            predict_random(self),
+            # predict_random(self),
             predict_nn(self),
         ]
 

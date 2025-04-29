@@ -22,8 +22,9 @@ services:
       dockerfile: ./Dockerfile
       target: postgres-db
     restart: unless-stopped
-    # set shared memory limit when using docker-compose
-    shm_size: 128mb
+    shm_size: 128mb # Shared memory limit
+    volumes:
+      - data:/var/lib/postgresql/data
     environment:
       POSTGRES_PASSWORD: password
       POSTGRES_USER: docker
