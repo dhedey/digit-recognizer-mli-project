@@ -8,6 +8,9 @@ services:
       - "127.0.0.1:8501:8501"
     environment:
       - MODEL_API_BASE_URL=http://model-api:8000
+    depends_on:
+      model-api:
+        condition: service_healthy
   model-api:
     build:
       dockerfile: ./Dockerfile
@@ -17,6 +20,9 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       - DATABASE_URL=postgresql+psycopg2://docker:password@postgres-db/submissions
+    depends_on:
+      postgres-db:
+        condition: service_healthy
   postgres-db:
     build:
       dockerfile: ./Dockerfile
@@ -29,6 +35,10 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_USER: docker
       POSTGRES_DB: submissions
+    healthcheck:
+      test: pg_isready -U docker -d submissions
+      start_interval: 1s
+      timeout: 5s
 
 volumes:
   postgres_data:

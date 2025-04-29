@@ -4,6 +4,8 @@
 # https://github.com/apache/arrow/issues/39846#issuecomment-1916269760
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS base
 
+RUN apt-get update && apt-get install -y curl
+
 #####################################################
 # ================= APP CONTAINER ================= #
 #####################################################
@@ -23,7 +25,7 @@ RUN uv sync --frozen --no-dev --package app
 EXPOSE 8501
 
 # Add a healthcheck
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+HEALTHCHECK --start-interval=1s CMD curl --fail http://localhost:8501/_stcore/health
 
 # Copy the rest of current directory contents across
 # Note that importantly the .venv directory is excluded in the .dockerignore file
@@ -44,7 +46,7 @@ WORKDIR /app
 EXPOSE 8000
 
 # Add a healthcheck
-HEALTHCHECK CMD curl --fail http://localhost:8000/health
+HEALTHCHECK --start-interval=1s CMD curl --fail http://localhost:8000/health
 
 # Copy the code across
 # Note that importantly the .venv directory is excluded in the .dockerignore file
