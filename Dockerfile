@@ -60,3 +60,9 @@ RUN uv sync --frozen --no-dev --package model-api
 
 # Command to run the FastAPI app
 ENTRYPOINT ["uv", "run", "--package", "model-api", "fastapi", "run", "packages/model-api/src/model_api/main.py"]
+
+################################################
+# ================= DATABASE ================= #
+################################################
+FROM postgres:17-bookworm AS postgres-db
+COPY ./deployment/init_db.sql /docker-entrypoint-initdb.d/
