@@ -5,13 +5,15 @@ services:
     build:
       dockerfile: ./Dockerfile
       target: app
+    restart: unless-stopped
     ports:
-      - "8501:8501"
+      - "127.0.0.1:8501:8501"
     environment:
       - MODEL_API_BASE_URL=http://model-api:8000
   model-api:
     build:
       dockerfile: ./Dockerfile
       target: model-api
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"

@@ -40,22 +40,23 @@ FROM base AS model-api
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy just the files relevant to syncing to leverage the Docker cache
-COPY uv.lock pyproject.toml .python-version /app/
-COPY packages/model-api/pyproject.toml /app/packages/model-api/pyproject.toml
-
-# Install just the dependencies for the model-api package
-RUN uv sync --frozen --no-dev --package model-api
-
 # Expose the port that fast api runs on
 EXPOSE 8000
 
 # Add a healthcheck
 HEALTHCHECK CMD curl --fail http://localhost:8000/health
 
-# Copy the rest of current directory contents across
+# Copy the code across
 # Note that importantly the .venv directory is excluded in the .dockerignore file
+# <SIDENOTE>
+# Ideally we'd download the dependencies into a docker cache layer before adding the code,
+# (e.g. via copying the pyproject.yml and lock files, then syncing first - like with the app container)
+# but this errors now that I've added a workspace dependency on the model package, so we'll go back to this.
+# </SIDENOTE>
 COPY . /app
 
+# Install just the dependencies for the model-api package
+RUN uv sync --frozen --no-dev --package model-api
+
 # Command to run the FastAPI app
-ENTRYPOINT ["uv", "run", "--package", "model-api", "fastapi", "run", "packages/model-api/src/model-api/main.py"]
+ENTRYPOINT ["uv", "run", "--package", "model-api", "fastapi", "run", "packages/model-api/src/model_api/main.py"]
