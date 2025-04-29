@@ -8,20 +8,8 @@ def load_env_string(name: str) -> str:
         raise ValueError(f"Environment variable {name} not set")
     return loaded
 
-def pixels_to_png_bytes(pixels: np.array) -> bytes:
-    """Convert a numpy array of pixels to a PNG image in bytes"""
-    from PIL import Image
-    import io
-    image_io = io.BytesIO()
-    image = Image.fromarray(pixels)
-    image.save(image_io, format="PNG")
-    return image_io.getvalue()
-
-def png_bytes_to_data_uri(png_bytes: bytes) -> str:
-    import base64
-    return f"data:image/png;base64,{base64.b64encode(png_bytes).decode('ascii')}"
-
 # Could probably use torchvision to help here, but I wanted to get some numpy experience
+# (Using e.g. channel helper methods, and pooling for the mean)
 def rgba_to_downscaled_greyscale(rgba: np.array, output_shape: (int, int)) -> np.array:
     """
     Takes an RGBA image from a canvas and downscales it to a greyscale image of the given shape.

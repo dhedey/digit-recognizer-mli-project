@@ -58,7 +58,7 @@ wheels = [
 [[package]]
 name = "app"
 version = "0.1.0"
-source = { virtual = "packages/app" }
+source = { editable = "packages/app" }
 dependencies = [
     { name = "pandas" },
     { name = "requests" },
@@ -1178,7 +1178,7 @@ dev = [{ name = "jupyter", specifier = ">=1.1.1" }]
 [[package]]
 name = "model-api"
 version = "0.1.0"
-source = { virtual = "packages/model-api" }
+source = { editable = "packages/model-api" }
 dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "model" },

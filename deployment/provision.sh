@@ -10,11 +10,14 @@ cd digit-recognizer-mli-project
 docker compose up -d
 
 # Install caddy to act as a reverse proxy
-# Keeping this out of the docker compose setup makes it a little easier to separate concerns
+# Whilst we could use a docker image (https://www.docker.com/blog/deploying-web-applications-quicker-and-easier-with-caddy-2/)
+# It's a slightly nicer separation of concerns to keep this out of the docker compose setup, so we can use the same between dev and prod
 sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
 sudo apt update
 sudo apt install caddy
-caddy start # It might have already started
+
+# And start/reload Caddy
+caddy start
 caddy reload --config ./deployment/Caddyfile

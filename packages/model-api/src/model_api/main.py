@@ -1,15 +1,12 @@
 from fastapi import FastAPI, status, HTTPException
-from pydantic import BaseModel
 from typing import List
 import numpy as np
+from .api_models import HealthCheck, ApiDigitData, ApiSubmittedDigit, DigitClassification, PreviousSubmission
+from .submission_store import InMemorySubmissionStore
 from dataclasses import dataclass
 from model import CenteredDigitModel
 
 app = FastAPI()
-
-class HealthCheck(BaseModel):
-    """Response model to validate and return when performing a health check."""
-    status: str = "OK"
 
 @app.get(
     "/health",
@@ -26,43 +23,58 @@ async def health_check() -> HealthCheck:
 class DigitData:
     pixels: np.array
 
-class ApiDigitData(BaseModel):
-    pixels: List[List[int]]
-
-    def to_numpy(self) -> DigitData:
-        try:
-            pixels = np.array(self.pixels, dtype=np.uint8)
-            pixels = pixels.reshape((28, 28))
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail="Invalid pixel data shape, expected 28 x 28 integers from 0-255") from e
-        return DigitData(
-            pixels=pixels
-        )
-
-class ApiSubmittedDigit(BaseModel):
-    digit: ApiDigitData
-    label: int
-
-class DigitClassification(BaseModel):
-    model: str
-    predicted_digit: int
-    """Confidence in prediction, between 0 and 1"""
-    confidence: float
+def create_digit_data(api_data: ApiDigitData) -> DigitData:
+    try:
+        pixels = np.array(api_data.pixels, dtype=np.uint8)
+        pixels = pixels.reshape((28, 28))
+    except ValueError as e:
+        raise HTTPException(status_code=400,
+                            detail="Invalid pixel data shape, expected 28 x 28 integers from 0-255") from e
+    return DigitData(
+        pixels=pixels
+    )
 
 @app.post("/recognize-digit")
 async def recognize_digit(data: ApiDigitData) -> list[DigitClassification]:
-    pixel_data = data.to_numpy()
+    pixel_data = create_digit_data(data)
     return create_predictions(pixel_data)
+
+submission_store = InMemorySubmissionStore()
+
+def pixels_to_png_bytes(pixels: np.array) -> bytes:
+    """Convert a numpy array of pixels to a PNG image in bytes"""
+    from PIL import Image
+    import io
+    image_io = io.BytesIO()
+    image = Image.fromarray(pixels)
+    image.save(image_io, format="PNG")
+    return image_io.getvalue()
+
+def png_bytes_to_base64(png_bytes: bytes) -> str:
+    import base64
+    return base64.b64encode(png_bytes).decode('ascii')
+
 
 @app.post("/submit-digit")
 async def submit_digit(data: ApiSubmittedDigit):
-    pixel_data = data.to_numpy()
+    import datetime
+    pixel_data = create_digit_data(data.digit)
     label = data.label
     if not (0 <= label <= 9):
         raise HTTPException(status_code=400, detail="Label must be between 0 and 9")
     predictions = create_predictions(pixel_data)
-    # TODO: Move pixels_to_png_bytes here
-    # TODO: Store the label and predictions in a database
+    submission_store.add_submission(
+        PreviousSubmission(
+            timestamp=datetime.datetime.now(datetime.UTC).isoformat(),
+            png_base64=png_bytes_to_base64(pixels_to_png_bytes(pixel_data.pixels)),
+            label=label,
+            predictions=predictions,
+        )
+    )
+
+@app.get("/recent-submissions")
+async def recent_submissions() -> List[PreviousSubmission]:
+    return submission_store.get_recent_submissions(20)
 
 def create_predictions(data: DigitData) -> List[DigitClassification]:
     return [
@@ -90,7 +102,3 @@ def predict_nn(data: DigitData) -> DigitClassification:
         predicted_digit=predicted_digit,
         confidence=confidence,
     )
-
-@app.get("/")
-async def root():
-    return {"value": 1337}

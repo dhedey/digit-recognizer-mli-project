@@ -2,14 +2,17 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from streamlit_drawable_canvas import st_canvas
-from datetime import datetime
+from datetime import datetime, UTC
 import helpers
 import api_client
 
 RAW_IMAGE_SIZE = 28
 DRAWING_SCALE = 8
 
-st.title("Digit Recognizer")
+st.set_page_config(
+    page_title="Digit Recognizer",
+    page_icon=":1234:",
+)
 input_column, predictions_column = st.columns([1, 1])
 
 with input_column:
@@ -66,26 +69,29 @@ with predictions_column:
         table_data.set_index('Model', inplace=True)
         st.table(table_data)
 
-if "submissions" not in st.session_state:
-    st.session_state.submissions = []
-
-submissions = st.session_state.submissions
+if "submission_reload_at" not in st.session_state:
+    st.session_state.submission_reload_at = datetime.now(UTC).timestamp() * 1000
 
 if form_submitted:
-    # TODO - Move to postgres in API
-    submissions.append({
-        "image_png": helpers.pixels_to_png_bytes(vision_pixels),
-        "label": expected_label,
-        "predictions": predictions,
-        "timestamp": datetime.now()
-    })
+    api_client.submit_digit(vision_pixels, expected_label)
+    st.session_state.submission_reload_at += 1
+
+@st.cache_data
+def load_recent_submissions(cache_key):
+    # NB - we can't use _cache_key else it's ignored by the hashing function: https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data
+    _ignore = cache_key
+    return api_client.recent_submissions()
 
 with st.container(border = True):
     st.subheader("Previous submissions")
+    submissions = load_recent_submissions(
+        # Avoid reloading recent submissions every time we do a prediction; unless we know we submitted something
+        cache_key = st.session_state.submission_reload_at
+    )
     display_submissions = [
         {
             "Time": submission["timestamp"],
-            "Image": helpers.png_bytes_to_data_uri(submission["image_png"]),
+            "Image": f"data:image/png;base64,{submission["png_base64"]}",
             "Label": submission["label"],
         } | {
             f"Model: {prediction["model"]}": f"{prediction["predicted_digit"]} ({prediction["confidence"]:2.1%})" for prediction in submission["predictions"]
@@ -99,6 +105,7 @@ with st.container(border = True):
     st.dataframe(
         uploads_table,
         column_config = {
+            "Time": st.column_config.DatetimeColumn(format="distance", width="medium"),
             "Image": st.column_config.ImageColumn()
         }
     )
