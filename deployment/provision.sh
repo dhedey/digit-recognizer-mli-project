@@ -5,9 +5,9 @@ sudo apt update
 sudo apt install -y git
 
 cd ~
-git clone git@github.com:dhedey/digit-recognizer-mli-project.git
+git clone https://github.com/dhedey/digit-recognizer-mli-project.git
 cd digit-recognizer-mli-project
-docker-compose up -d
+docker compose up -d
 
 # Install caddy to act as a reverse proxy
 # Keeping this out of the docker compose setup makes it a little easier to separate concerns
@@ -16,4 +16,5 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --d
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
 sudo apt update
 sudo apt install caddy
-caddy reverse-proxy --from digit-recognizer.david-edey.com --to localhost:8501
+caddy start # It might have already started
+caddy reload --config ./deployment/Caddyfile
