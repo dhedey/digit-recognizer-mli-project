@@ -27,14 +27,14 @@ def predict_random(data: PredictionDigitData) -> PredictionClassification:
     return PredictionClassification(
         model="random",
         predicted_digit=random_label,
-        confidence=0,
+        confidence=0.1,
     )
 
 centered_digit_model = CenteredDigitModel()
 
 def predict_nn(data: PredictionDigitData) -> PredictionClassification:
     from PIL import Image
-    (predicted_digit, confidence) = centered_digit_model.predict(Image.fromarray(data.pixels))
+    (predicted_digit, confidence) = centered_digit_model.predict(Image.fromarray(data.pixels), 0.1)
     return PredictionClassification(
         model="nn-centered",
         predicted_digit=predicted_digit,

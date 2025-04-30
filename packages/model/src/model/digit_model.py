@@ -27,7 +27,7 @@ class DigitModelBase:
     def __init__(self, network):
         self.network = network
 
-    def probabilities(self, pil_image: PIL.Image.Image):
+    def probabilities(self, pil_image: PIL.Image.Image, temperature: float):
         """
         Expects a 28x28 greyscale image with a white background,
         and returns a list of 10 (digit, probability) tuples.
@@ -45,15 +45,15 @@ class DigitModelBase:
             raise ValueError("Expected a 28x28 greyscale image")
         singleton_batch = torch.stack([image_tensor])
         logits = self.network(singleton_batch)
-        digit_probabilities = [x for x in enumerate(F.softmax(logits, dim=1)[0].tolist())]
+        digit_probabilities = [x for x in enumerate(F.softmax(logits * temperature, dim=1)[0].tolist())]
         return digit_probabilities
 
-    def predict(self, pil_image: PIL.Image.Image):
+    def predict(self, pil_image: PIL.Image.Image, temperature: float):
         """
         Expects a 28x28 greyscale image with a white background,
         and returns (predicted_digit, probability)
         """
-        return max(self.probabilities(pil_image), key=lambda x: x[1])
+        return max(self.probabilities(pil_image, temperature), key=lambda x: x[1])
 
 class CenteredDigitModel(DigitModelBase):
     def __init__(self):
