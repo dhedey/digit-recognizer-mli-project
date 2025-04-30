@@ -29,7 +29,7 @@ with input_column:
         )
 
         with st.form("submission_form", border = False):
-            expected_label = st.number_input("Drawn digit", 0, 9, )
+            expected_label = st.number_input("Actual digit", 0, 9, )
             form_submitted = st.form_submit_button("Submit drawing / label pair")
 
 # When the canvas first loads, it has a shape of (300, 600, 4) briefly
