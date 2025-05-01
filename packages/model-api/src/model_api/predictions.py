@@ -1,6 +1,6 @@
 from typing import List
 import numpy as np
-from model import CenteredDigitModel
+from model import FirstModel, SecondModel
 from dataclasses import dataclass
 
 @dataclass
@@ -17,7 +17,8 @@ class PredictionDigitData:
     def create_predictions(self) -> List[PredictionClassification]:
         return [
             # predict_random(self),
-            predict_nn(self),
+            predict_cnn_v1(self),
+            predict_cnn_v2(self),
         ]
 
 def predict_random(data: PredictionDigitData) -> PredictionClassification:
@@ -30,13 +31,24 @@ def predict_random(data: PredictionDigitData) -> PredictionClassification:
         confidence=0.1,
     )
 
-centered_digit_model = CenteredDigitModel()
+first_model = FirstModel()
 
-def predict_nn(data: PredictionDigitData) -> PredictionClassification:
+def predict_cnn_v1(data: PredictionDigitData) -> PredictionClassification:
     from PIL import Image
-    (predicted_digit, confidence) = centered_digit_model.predict(Image.fromarray(data.pixels), 0.1)
+    (predicted_digit, confidence) = first_model.predict(Image.fromarray(data.pixels), 0.1, scale=False)
     return PredictionClassification(
-        model="nn-centered",
+        model="cnn-v1",
+        predicted_digit=predicted_digit,
+        confidence=confidence,
+    )
+
+second_model = SecondModel()
+
+def predict_cnn_v2(data: PredictionDigitData) -> PredictionClassification:
+    from PIL import Image
+    (predicted_digit, confidence) = second_model.predict(Image.fromarray(data.pixels), 0.4, scale=True)
+    return PredictionClassification(
+        model="cnn-v2",
         predicted_digit=predicted_digit,
         confidence=confidence,
     )

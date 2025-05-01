@@ -1,1 +1,1 @@
-from .digit_model import CenteredDigitModel
+from .digit_model import FirstModel, SecondModel
