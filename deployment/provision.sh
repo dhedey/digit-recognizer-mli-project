@@ -19,5 +19,6 @@ sudo apt update
 sudo apt install caddy
 
 # And start/reload Caddy
+cp ./deployment/Caddyfile /etc/caddy/Caddyfile
 caddy start
-caddy reload --config ./deployment/Caddyfile
+caddy reload

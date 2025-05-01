@@ -2,5 +2,6 @@
 # Run as root, by running: ssh root@<server-ip>
 cd ~/digit-recognizer-mli-project
 git pull
-caddy reload --config ./deployment/Caddyfile
+cp ./deployment/Caddyfile /etc/caddy/Caddyfile
+caddy reload
 docker compose up -d --build
