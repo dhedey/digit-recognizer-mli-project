@@ -123,7 +123,7 @@ class FirstModel(DigitModelBase):
         network = FirstNetwork()
         from importlib import resources
         weights = resources.open_binary(__package__, "model_v1.pth")
-        network.load_state_dict(torch.load(weights))
+        network.load_state_dict(torch.load(weights, map_location="cpu"))
         network.eval()
         super().__init__(network)
 
@@ -132,6 +132,6 @@ class SecondModel(DigitModelBase):
         network = SecondNetwork()
         from importlib import resources
         weights = resources.open_binary(__package__, "model_v2.pth")
-        network.load_state_dict(torch.load(weights))
+        network.load_state_dict(torch.load(weights, map_location="cpu"))
         network.eval()
         super().__init__(network)
