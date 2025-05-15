@@ -48,13 +48,19 @@ EXPOSE 8000
 # Add a healthcheck
 HEALTHCHECK --start-interval=1s CMD curl --fail http://localhost:8000/health
 
-# Copy the code across
+# Copy just the files relevant to syncing to leverage the Docker cache and avoiding having
+# to reinstall all dependencies if there's just a code change
+COPY uv.lock pyproject.toml .python-version /app/
+COPY packages/model-api/pyproject.toml /app/packages/model-api/pyproject.toml
+COPY packages/model/pyproject.toml /app/packages/model/pyproject.toml
+
+# Install just the dependencies for the model-api package
+# The --no-install-workspace ensures we don't error when we try to install workspace apps
+# See https://github.com/astral-sh/uv/issues/6867 and https://github.com/astral-sh/uv/issues/6935
+RUN uv sync --frozen --no-install-workspace --no-dev --package model-api
+
+# Copy all the code across
 # Note that importantly the .venv directory is excluded in the .dockerignore file
-# <SIDENOTE>
-# Ideally we'd download the dependencies into a docker cache layer before adding the code,
-# (e.g. via copying the pyproject.yml and lock files, then syncing first - like with the app container)
-# but this errors now that I've added a workspace dependency on the model package, so we'll go back to this.
-# </SIDENOTE>
 COPY . /app
 
 # Install just the dependencies for the model-api package
